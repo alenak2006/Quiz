@@ -1,15 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { BrowserRouter, Route, withRouter } from 'react-router-dom'
-import * as ReactRedux from 'react-redux'
-import * as Redux from 'redux'
+import { BrowserRouter, Route } from 'react-router-dom';
+import * as Redux from 'redux';
+import * as ReactRedux from 'react-redux';
 import './index.css';
 import AuthorQuiz from './AuthorQuiz';
 import AddAuthorForm from './AddAuthorForm';
 import * as serviceWorker from './serviceWorker';
 import { shuffle, sample } from 'underscore';
-import { type } from 'os';
-
 
 const authors = [
     {
@@ -52,6 +50,21 @@ const authors = [
     }
 ];
 
+function getTurnData(authors) {
+    const allBooks = authors.reduce(function (p, c, i) {
+        return p.concat(c.books);
+    }, []);
+    const fourRandomBooks = shuffle(allBooks).slice(0, 4);
+    const answer = sample(fourRandomBooks);
+
+    return {
+        books: fourRandomBooks,
+        author: authors.find((author) =>
+            author.books.some((title) =>
+                title === answer))
+    }
+}
+
 function reducer(
     state = { authors, turnData: getTurnData(authors), highlight: '' },
     action) {
@@ -76,44 +89,20 @@ function reducer(
     }
 }
 
-let store = Redux.createStore(reducer);
-
-function getTurnData() {
-    const allBooks = authors.reduce(function (prev, curr, index) {
-        return prev.concat(curr.books);
-    }, []);
-    const fourRandomBooks = shuffle(allBooks).slice(0, 4);
-    const answer = sample(fourRandomBooks);
-    return {
-        books: fourRandomBooks,
-        author: authors.find((author) =>
-            author.books.some((title) =>
-                title === answer))
-    }
-}
-
-
-function App() {
-    return <ReactRedux.Provider store={store}>
-        <AuthorQuiz />
-    </ReactRedux.Provider>;
-}
-
-const AuthorWrapper = withRouter(({ history }) =>
-    <AddAuthorForm onAddAuthor={(author) => {
-        authors.push(author);
-        history.push('/');
-    }} />
+let store = Redux.createStore(
+    reducer,
+    window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__()
 );
 
 ReactDOM.render(
     <BrowserRouter>
-        <React.Fragment>
-            <Route exact path="/" component={App} />
-            <Route exact path="/add" component={AuthorWrapper} />
-        </React.Fragment>
+        <ReactRedux.Provider store={store}>
+            <React.Fragment>
+                <Route exact path="/" component={AuthorQuiz} />
+                <Route path="/add" component={AddAuthorForm} />
+            </React.Fragment>
+        </ReactRedux.Provider>
     </BrowserRouter>, document.getElementById('root'));
-
 
 // If you want your app to work offline and load faster, you can change
 // unregister() to register() below. Note this comes with some pitfalls.
