@@ -52,3 +52,9 @@
   padding-top: 20px;
   padding-bottom: 20px;
 }
+
+.timer {
+  padding-right: 10px;
+  padding-top: 10px;
+  text-align: center;
+}

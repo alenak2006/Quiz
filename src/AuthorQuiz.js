@@ -1,5 +1,8 @@
 import React from 'react';
+import ReactDom from 'react-dom';
 import { Link } from 'react-router-dom'
+import * as ReactRedux from 'react-redux'
+import * as Redux from 'redux'
 import logo from './logo.svg';
 import './App.css';
 import './bootstrap.min.css';
@@ -79,17 +82,72 @@ function Footer() {
 
 }
 
-function AuthorQuiz({ turnData, highlight, onAnswerSelected, onContinue }) {
-  return (
-    <div className="container-fluid">
-      <Hero />
-      <Turn {...turnData} highlight={highlight} onAnswerSelected={onAnswerSelected} />
-      <Continue show={highlight === "correct"} onContinue={onContinue} />
-      <p><Link to="/add">Add an author</Link></p>
-      <Footer />
-    </div>
-  );
+let container = Redux.createStore((model = { running: false, time: 0 }, action) => {
+  const updates = {
+    'START': (model) => Object.assign({}, model, { running: true }),
+    'STOP': (model) => Object.assign({}, model, { running: false }),
+    'TICK': (model) => Object.assign({}, model, { time: model.time + (model.running ? 1 : 0) })
+  };
+  return (updates[action.type] || (() => model))(model);
+});
+
+const mapStateToPropsW = (state) => state;
+const mapDispatchToPropsW = (dispatch, props) => ({
+  onStart: () => { dispatch({ type: 'START' }); },
+  onStop: () => { dispatch({ type: 'STOP' }); }
+});
+
+const Stopwatch = ReactRedux.connect(mapStateToPropsW, mapDispatchToPropsW)((props) => {
+  let minutes = Math.floor(props.time / 60);
+  let seconds = props.time - (minutes * 60);
+  let secondsFormatted = `${seconds < 10 ? '0' : ''}${seconds}`;
+
+  return <div className="row timer">
+    <p className="timer">Game Timer {minutes}:{secondsFormatted}</p>
+    <button className="btn btn-secondary" onClick={props.running ? props.onStop : props.onStart}>
+      {props.running ? 'Stop' : 'Start'}
+    </button>
+  </div>;
+});
+
+setInterval(() => {
+  container.dispatch({ type: 'TICK' })
+}, 1000)
+
+function mapStateToProps(state) {
+  return {
+    turnData: state.turnData,
+    highlight: state.highlight
+  };
 }
+
+function mapDispatchToProps(dispatch) {
+  return {
+    onEventSelected: (answer) => {
+      dispatch({ type: 'ANSWER_SELECTED', answer })
+    },
+    onContinue: () => {
+      dispatch({ type: 'CONTINUE' })
+    }
+  }
+}
+
+
+const AuthorQuiz = ReactRedux.connect(mapStateToProps, mapDispatchToProps)(
+  function ({ turnData, highlight, onAnswerSelected, onContinue }) {
+    return (
+      <div className="container-fluid">
+        <ReactRedux.Provider store={container}>
+          <Stopwatch />
+        </ReactRedux.Provider>
+        <Hero />
+        <Turn {...turnData} highlight={highlight} onAnswerSelected={onAnswerSelected} />
+        <Continue show={highlight === "correct"} onContinue={onContinue} />
+        <p><Link to="/add">Add an author</Link></p>
+        <Footer />
+      </div>
+    );
+  });
 
 
 export default AuthorQuiz;
